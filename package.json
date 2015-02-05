@@ -1,0 +1,32 @@
+{
+  "name": "app-deploy",
+  "version": "0.1.0",
+  "description": "Easier deployments",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "bin": {
+  	  "app-deploy": "index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/boo1ean/app-deploy.git"
+  },
+  "keywords": [
+    "deploy",
+    "app-helpers"
+  ],
+  "author": "Egor Gumenyuk <boo1ean0807@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/boo1ean/app-deploy/issues"
+  },
+  "homepage": "https://github.com/boo1ean/app-deploy",
+  "dependencies": {
+    "bluebird": "^2.9.6",
+    "configstore": "^0.3.2",
+    "lodash": "^3.1.0",
+    "minimatch": "^2.0.1"
+  }
+}
