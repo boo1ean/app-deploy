@@ -18,5 +18,11 @@ Specify glob patterns for detecting changes and appropriate commands to execute 
 }
 ```
 
+Usage:
+
+```
+app-deploy config.json
+```
+
 ## License
 MIT
