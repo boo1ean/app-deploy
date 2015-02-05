@@ -10,10 +10,10 @@ Specify glob patterns for detecting changes and appropriate commands to execute 
 // config.json
 {
 	"triggers": {
-		"bower.json": "bower intall",
-		"package.json": "npm intall",
-		"core/**": "pm2 restart processes.json",
-		"frontend/**": "gulp build",
+		"bower.json"   : "bower intall",
+		"package.json" : "npm intall",
+		"core/**"      : "pm2 restart processes.json",
+		"frontend/**"  : "gulp build",
 	}
 }
 ```
