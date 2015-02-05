@@ -1,5 +1,5 @@
 {
 	"triggers": {
-		"package.json": "npm install"
+		"**": "npm install"
 	}
 }

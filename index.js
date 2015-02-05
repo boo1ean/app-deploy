@@ -114,6 +114,7 @@ Promise.all([
 	}
 
 	function execAndPrint (cmd) {
+		console.log(cmd);
 		return exec(cmd).then(function (results) {
 			var out = results.filter(Boolean)[0];
 
