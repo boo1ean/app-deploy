@@ -14,6 +14,7 @@ Specify glob patterns for detecting changes and appropriate commands to execute 
 		"package.json" : "npm intall",
 		"core/**"      : "pm2 restart processes.json",
 		"frontend/**"  : "gulp build",
+		"database/**"  : "knex migrate:latest"
 	}
 }
 ```
