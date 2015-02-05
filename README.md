@@ -1,6 +1,6 @@
 ## app-deploy
 
-Track file differ from last deploy and execute only specific commands to setup updates.
+Determine files diff from last deploy and execute only specific commands to setup updates.
 
 ## Triggers config
 
