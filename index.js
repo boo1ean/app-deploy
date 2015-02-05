@@ -21,7 +21,7 @@ var conf = new Configstore(packageName);
 validateConfig(triggersConfig);
 
 function exec (cmd) {
-	console.log(cmd);
+	//console.log(cmd);
 	return execCommand(cmd);
 }
 
@@ -64,6 +64,10 @@ Promise.all([
 	getLastDeployHash(),
 	getLatestCurrentHash()
 ]).spread(function (latestDeployHash, currentHash) {
+	if (latestDeployHash === currentHash) {
+		halt('Nothing to deploy');
+	}
+
 	var commands = [];
 
 	if (!latestDeployHash) {

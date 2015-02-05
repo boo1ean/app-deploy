@@ -1,7 +1,7 @@
 {
   "name": "app-deploy",
-  "version": "0.1.0",
-  "description": "Easier deployments",
+  "version": "0.1.1",
+  "description": "Deployment helper",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
