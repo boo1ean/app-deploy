@@ -1,0 +1,124 @@
+#!/usr/bin/env node
+
+var Promise = require('bluebird');
+var _ = require('lodash');
+var minimatch = require('minimatch');
+var path = require('path');
+var fs = require('fs');
+var realist = require('realist');
+var table = require('text-table');
+var shell = require('../lib/shell');
+var u = require('../lib/utils');
+
+var Configstore = require('configstore');
+var Storage = require('../lib/storage');
+var Matcher = require('../lib/matcher');
+var Config = require('../lib/config');
+
+var configPath = path.resolve('app-deploy.json');
+
+try {
+	var config  = new Config(configPath);
+	var conf    = new Configstore(configPath);
+	var storage = new Storage(conf);
+} catch (e) {
+	handleError(e);
+}
+
+var commands = {
+	'default': usage,
+	'remote add <name> <url>': addRemote,
+	'remote ls': listRemotes,
+	'deploy': deploy
+};
+
+function usage () {
+	u.info(fs.readFileSync(__dirname + '/usage.txt').toString());
+}
+
+function addRemote (opts, name, url) {
+	validateRemote(name, url);
+	storage.saveRemote(name, url);
+
+	function validateRemote (name, url) {
+
+	}
+}
+
+function listRemotes () {
+	var remotes = storage.getRemotes();
+
+	if (_.isEmpty(remotes)) {
+		u.halt('There are no remotes');
+	}
+
+	u.info(table(_.pairs(remotes)));
+}
+
+function deploy (opts) {
+	if (isGitRepoMissing()) {
+		u.halt('Git repository not found');
+	}
+
+	try {
+		var matcher = new Matcher(minimatch);
+
+		Promise.all([
+			storage.getRecentDeployHash(),
+			shell.getHeadHash()
+		]).spread(function (recentDeployHash, headHash) {
+			var commands;
+
+			if (isEverythingDeployed(recentDeployHash, headHash)) {
+				throw new Error('Nothing to deploy');
+			}
+
+			if (didNotDeployYet(recentDeployHash)) {
+				commands = matcher.findInitialTriggersToExecute(config.triggers);
+			} else {
+				// Get list of changed files
+				var files = shell.getChangedFilesBetween(recentDeployHash, headHash);
+
+				// Changed files info
+				u.info('Changed files:');
+				u.info(files.join('\n'), '\n');
+
+				// Get list of commands to execute according to changed files
+				commands = matcher.findTriggersToExecute(config.triggers, files);
+			}
+
+			// Execute commands
+			shell.executeCommands(commands);
+
+			// Save deploy to completed deploys array
+			storage.saveDeployInfo({ hash: headHash, commands: commands });
+
+			u.info('Successfully deployed!');
+		}).catch(handleError);
+	} catch (e) {
+		handleError(e);
+	}
+
+	function isGitRepoMissing () {
+		try {
+			shell.exec('git st');
+			return false;
+		} catch (e) {
+			return true;
+		}
+	}
+
+	function didNotDeployYet (hash) {
+		return !hash;
+	}
+
+	function isEverythingDeployed (left, right) {
+		return left === right;
+	}
+}
+
+function handleError (e) {
+	u.halt(e.message);
+}
+
+realist(commands);
