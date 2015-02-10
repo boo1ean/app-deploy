@@ -1,136 +1,87 @@
 #!/usr/bin/env node
 
-var triggersConfigPath = process.argv[2];
-
-if (!triggersConfigPath) {
-	halt('Please specify config file');
-}
-
-var Configstore = require('configstore');
-var packageName = require('./package').name;
 var Promise = require('bluebird');
-var execCommand = Promise.promisify(require('child_process').exec);
-var fs = require('fs');
 var _ = require('lodash');
 var minimatch = require('minimatch');
+var shell = require('./lib/shell');
+var u = require('./lib/utils');
 
-var triggersConfig = JSON.parse(fs.readFileSync(triggersConfigPath).toString());
+var Configstore = require('configstore');
+var Storage = require('./lib/storage');
+var Matcher = require('./lib/matcher');
+var Config = require('./lib/config');
 
-var conf = new Configstore(packageName);
+var packageName = require('../package').name;
+var defaultConfig = 'app-deploy.json';
 
-validateConfig(triggersConfig);
-
-function exec (cmd) {
-	//console.log(cmd);
-	return execCommand(cmd);
+if (isGitRepoMissing()) {
+	u.halt('Git repository not found');
 }
 
-function validateConfig (config) {
-	if (!config.triggers) {
-		halt('Wrong config: triggers settings are required');
-	}
-}
+try {
+	var conf    = new Configstore(packageName);
+	var storage = new Storage(conf);
+	var config  = new Config(process.argv[2] || defaultConfig);
+	var matcher = new Matcher(minimatch);
 
-function halt () {
-	console.error.apply(console, arguments);
-	process.exit();
-}
+	Promise.all([
+		storage.getRecentDeployHash(),
+		shell.getHeadHash()
+	]).spread(function (recentDeployHash, headHash) {
+		var commands;
 
-function init () {
-	if (!conf.get('deploys')) {
-		conf.set('deploys', []);
-	}
-}
-
-function pushDeployHash (hash) {
-	var deploys = conf.get('deploys');
-	deploys.push(hash);
-	conf.set('deploys', deploys);
-}
-
-function getLastDeployHash () {
-	return Promise.resolve(conf.get('deploys').pop());
-}
-
-function getLatestCurrentHash () {
-	return exec('git log --pretty=%H | head -n 1').then(function (results) {
-		return results.filter(Boolean).shift().trim();
-	});
-}
-
-init();
-
-Promise.all([
-	getLastDeployHash(),
-	getLatestCurrentHash()
-]).spread(function (latestDeployHash, currentHash) {
-	if (latestDeployHash === currentHash) {
-		halt('Nothing to deploy');
-	}
-
-	var commands = [];
-
-	if (!latestDeployHash) {
-		return executeAllCommands()
-			.then(finilizeDeploy);
-	}
-
-	function executeAllCommands () {
-		commands = _.values(triggersConfig.triggers);
-		return executeCommands();
-	}
-
-	var cmd = 'git diff --name-only ' + currentHash + ' ' + latestDeployHash;
-	exec(cmd).then(function (results) {
-		var output = results[0];
-
-		if (output) {
-			var files = output.split('\n').filter(Boolean);
-
-			console.log('Changes:', files.join('\n'));
-
-			_.forEach(triggersConfig.triggers, findCommandsToExecute);
-
-			executeCommands()
-				.then(finilizeDeploy);
+		if (isEverythingDeployed(recentDeployHash, headHash)) {
+			throw new Error('Nothing to deploy');
 		}
 
-		function findCommandsToExecute (cmd, pattern) {
-			if (isChanged(pattern, files)) {
-				commands.push(cmd);
-			}
+		if (didNotDeployYet(recentDeployHash)) {
+			commands = matcher.findInitialTriggersToExecute(config.triggers);
+		} else {
+			// Get list of changed files
+			var files = shell.getChangedFilesBetween(recentDeployHash, headHash);
+
+			// Changed files info
+			u.info('Changed files:');
+			u.info(files.join('\n'), '\n');
+
+			// Get list of commands to execute according to changed files
+			commands = matcher.findTriggersToExecute(config.triggers, files);
 		}
 
-		function isChanged (pattern, files) {
-			return files.filter(function (f) {
-				return minimatch(f, pattern);
-			}).length;
-		}
+		// Execute commands
+		shell.executeCommands(commands);
 
-	}).catch(console.error);
+		// Save deploy to completed deploys array
+		storage.saveDeployInfo({ hash: headHash, commands: commands });
 
-	function executeCommands () {
-		return Promise.each(commands, execAndPrint);
+		u.info('Successfully deployed!');
+	}).catch(handleError);
+} catch (e) {
+	handleError(e);
+}
+
+function isGitRepoMissing () {
+	try {
+		shell.exec('git st');
+		return false;
+	} catch (e) {
+		return true;
 	}
+}
 
-	function execAndPrint (cmd) {
-		console.log(cmd);
-		return exec(cmd).then(function (results) {
-			var out = results.filter(Boolean)[0];
+function didNotDeployYet (hash) {
+	return !hash;
+}
 
-			if (out) {
-				console.log(out);
-			}
+function isEverythingDeployed (left, right) {
+	return left === right;
+}
 
-			console.log('=====================\n');
-		})
-		.catch(function (err) {
-			halt(cmd, 'failed');
-		});
-	}
+function handleError (e) {
+	u.halt(e.message);
+}
 
-	function finilizeDeploy () {
-		pushDeployHash(currentHash);
-		console.log('success');
-	}
-});
+// 1. There is no git repo
+// 2. There are no deploys
+// 3. There are no new commits
+// 4. There are new commits
