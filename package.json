@@ -1,13 +1,13 @@
 {
   "name": "app-deploy",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Deployment helper",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
   },
   "bin": {
-    "app-deploy": "bin/app-deploy"
+    "ad": "bin/app-deploy"
   },
   "repository": {
     "type": "git",
@@ -24,7 +24,6 @@
   },
   "homepage": "https://github.com/boo1ean/app-deploy",
   "dependencies": {
-    "bluebird": "^2.9.6",
     "configstore": "^0.3.2",
     "lodash": "^3.1.0",
     "minimatch": "^2.0.1",
