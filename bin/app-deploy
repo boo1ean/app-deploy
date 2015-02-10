@@ -28,8 +28,22 @@ try {
 var commands = {
 	'default': usage,
 	'remote add <name> <url>': addRemote,
+	'remote rm <name>': removeRemote,
 	'remote ls': listRemotes,
-	'deploy': deploy
+	'deploy local': deploy,
+	'deploy <remote>': remoteDeploy
+};
+
+function remoteDeploy (opts, remote) {
+	var url = storage.getRemoteUrlByName(remote);
+
+	if (!url) {
+		u.halt('Remote ' + remote + ' not found');
+	}
+
+	var cmd = 'ssh ' + url.connectionString + ' \'cd ' + url.path + '; ad deploy local\'';
+	var result = shell.exec(cmd);
+	u.info(result.output);
 };
 
 function usage () {
@@ -37,12 +51,24 @@ function usage () {
 }
 
 function addRemote (opts, name, url) {
-	validateRemote(name, url);
-	storage.saveRemote(name, url);
 
-	function validateRemote (name, url) {
+	var tokens = url.split(':');
+	var connectionString = tokens[0];
+	var workingPath = tokens[1];
 
+	validateRemote(connectionString, workingPath);
+	storage.saveRemote(name, { connectionString: connectionString, path: workingPath });
+
+	function validateRemote (connectionString, workingPath) {
+		if (!connectionString) {
+			u.halt('Please specify remote connection string');
+		}
+
+		if (!workingPath) {
+			u.halt('Please specify remote working path');
+		}
 	}
+
 }
 
 function listRemotes () {
@@ -52,7 +78,16 @@ function listRemotes () {
 		u.halt('There are no remotes');
 	}
 
-	u.info(table(_.pairs(remotes)));
+	remotes = _.map(remotes, function (remote, name) {
+		return [name, remote.connectionString, remote.path];
+	});
+
+	u.info(table(remotes));
+}
+
+function removeRemote (opts, name) {
+	storage.removeRemoteByName(name);
+	u.info('Successfully removed remote "' + name + '"');
 }
 
 function deploy (opts) {
@@ -60,44 +95,40 @@ function deploy (opts) {
 		u.halt('Git repository not found');
 	}
 
-	try {
-		var matcher = new Matcher(minimatch);
+	var matcher = new Matcher(minimatch);
 
-		Promise.all([
-			storage.getRecentDeployHash(),
-			shell.getHeadHash()
-		]).spread(function (recentDeployHash, headHash) {
-			var commands;
+	Promise.all([
+		storage.getRecentDeployHash(),
+		shell.getHeadHash()
+	]).spread(function (recentDeployHash, headHash) {
+		var commands;
 
-			if (isEverythingDeployed(recentDeployHash, headHash)) {
-				throw new Error('Nothing to deploy');
-			}
+		if (isEverythingDeployed(recentDeployHash, headHash)) {
+			throw new Error('Nothing to deploy');
+		}
 
-			if (didNotDeployYet(recentDeployHash)) {
-				commands = matcher.findInitialTriggersToExecute(config.triggers);
-			} else {
-				// Get list of changed files
-				var files = shell.getChangedFilesBetween(recentDeployHash, headHash);
+		if (didNotDeployYet(recentDeployHash)) {
+			commands = matcher.findInitialTriggersToExecute(config.triggers);
+		} else {
+			// Get list of changed files
+			var files = shell.getChangedFilesBetween(recentDeployHash, headHash);
 
-				// Changed files info
-				u.info('Changed files:');
-				u.info(files.join('\n'), '\n');
+			// Changed files info
+			u.info('Changed files:');
+			u.info(files.join('\n'), '\n');
 
-				// Get list of commands to execute according to changed files
-				commands = matcher.findTriggersToExecute(config.triggers, files);
-			}
+			// Get list of commands to execute according to changed files
+			commands = matcher.findTriggersToExecute(config.triggers, files);
+		}
 
-			// Execute commands
-			shell.executeCommands(commands);
+		// Execute commands
+		shell.executeCommands(commands);
 
-			// Save deploy to completed deploys array
-			storage.saveDeployInfo({ hash: headHash, commands: commands });
+		// Save deploy to completed deploys array
+		storage.saveDeployInfo({ hash: headHash, commands: commands });
 
-			u.info('Successfully deployed!');
-		}).catch(handleError);
-	} catch (e) {
-		handleError(e);
-	}
+		u.info('Successfully deployed!');
+	}).catch(handleError);
 
 	function isGitRepoMissing () {
 		try {
@@ -121,4 +152,8 @@ function handleError (e) {
 	u.halt(e.message);
 }
 
-realist(commands);
+try {
+	realist(commands);
+} catch (e) {
+	handleError(e);
+}
