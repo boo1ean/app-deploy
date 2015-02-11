@@ -2,6 +2,8 @@ app-deploy (0.2.0)
 
 commands:
 
-deploy          deploy project
-remote ls       list available remotes
-remote add      add new remote
+deploy local                execute deploy process locally
+deploy <remote>             execute deploy process remotely
+
+remote ls                   list available remotes
+remote add <name> <url>     add new remote

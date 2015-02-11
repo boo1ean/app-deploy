@@ -8,6 +8,7 @@ var realist = require('realist');
 var table = require('text-table');
 var shell = require('../lib/shell');
 var u = require('../lib/utils');
+var sprintf = require('util').format;
 
 var Configstore = require('configstore');
 var Storage = require('../lib/storage');
@@ -43,8 +44,14 @@ function addRemote (opts, name, url) {
 	var connectionString = tokens[0];
 	var workingPath = tokens[1];
 
+	var remote = {
+		connectionString: connectionString,
+		path: workingPath,
+		env: opts.env || ''
+	};
+
 	validateRemote(connectionString, workingPath);
-	storage.saveRemote(name, { connectionString: connectionString, path: workingPath });
+	storage.saveRemote(name, remote);
 
 	function validateRemote (connectionString, workingPath) {
 		if (!connectionString) {
@@ -66,7 +73,7 @@ function listRemotes () {
 	}
 
 	remotes = _.map(remotes, function (remote, name) {
-		return [name, remote.connectionString, remote.path];
+		return [name, remote.connectionString, remote.path, remote.env];
 	});
 
 	u.info(table(remotes));
@@ -77,14 +84,14 @@ function removeRemote (opts, name) {
 	u.info('Successfully removed remote "' + name + '"');
 }
 
-function remoteDeploy (opts, remote) {
-	var url = storage.getRemoteUrlByName(remote);
+function remoteDeploy (opts, remoteName) {
+	var remote = storage.getRemoteUrlByName(remoteName);
 
-	if (!url) {
-		u.halt('Remote ' + remote + ' not found');
+	if (!remote) {
+		u.halt('Remote ' + remoteName + ' not found');
 	}
 
-	var cmd = 'ssh ' + url.connectionString + ' \'cd ' + url.path + '; ./node_modules/.bin/ad deploy local\'';
+	var cmd = sprintf('ssh %s \'%s; cd %s; git pull; ./node_modules/.bin/ad deploy local\'', remote.connectionString, remote.env, remote.path);
 	var result = shell.exec(cmd);
 	u.info(result.output);
 };
