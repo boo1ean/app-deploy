@@ -7,3 +7,8 @@ deploy <remote>             execute deploy process remotely
 
 remote ls                   list available remotes
 remote add <name> <url>     add new remote
+remote rm <name>            remote remote
+
+options:
+
+--dry-run                   do not execute deploy commands, just show it

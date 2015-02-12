@@ -86,16 +86,24 @@ function removeRemote (opts, name) {
 
 function remoteDeploy (opts, remoteName) {
 	var remote = storage.getRemoteUrlByName(remoteName);
+	var flags = '';
 
 	if (!remote) {
 		u.halt('Remote ' + remoteName + ' not found');
 	}
 
-	var cmd = sprintf('ssh %s \'%s; cd %s; git pull; ./node_modules/.bin/ad deploy local\'', remote.connectionString, remote.env, remote.path);
+	if (opts.dryRun) {
+		flags = '--dry-run';
+	}
+
+	var cmd = sprintf(
+		'ssh %s \'%s; cd %s; git pull; ./node_modules/.bin/ad deploy local %s\'',
+		remote.connectionString, remote.env, remote.path, flags
+	);
+
 	var result = shell.exec(cmd);
 	u.info(result.output);
 };
-
 
 function localDeploy (opts) {
 	if (isGitRepoMissing()) {
@@ -127,13 +135,26 @@ function localDeploy (opts) {
 		commands = matcher.findTriggersToExecute(config.triggers, files);
 	}
 
-	// Execute commands
-	shell.executeCommands(commands);
+	if (opts.dryRun) {
+		dryRun();
+	} else {
+		run();
+	}
 
-	// Save deploy to completed deploys array
-	storage.saveDeployInfo({ hash: headHash, commands: commands });
+	function dryRun () {
+		u.info('Commands to be executed:');
+		u.info(commands.join('\n'));
+	}
 
-	u.info('Successfully deployed!');
+	function run () {
+		// Execute commands
+		shell.executeCommands(commands);
+
+		// Save deploy to completed deploys array
+		storage.saveDeployInfo({ hash: headHash, commands: commands });
+
+		u.info('Successfully deployed!');
+	}
 
 	function isGitRepoMissing () {
 		try {
@@ -157,8 +178,12 @@ function handleError (e) {
 	u.halt(e.message);
 }
 
+var options = {
+	'dryRun': ['dry-run', 'dry']
+};
+
 try {
-	realist(commands);
+	realist(commands, options);
 } catch (e) {
 	handleError(e);
 }
