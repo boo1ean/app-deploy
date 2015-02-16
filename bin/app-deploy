@@ -86,19 +86,23 @@ function removeRemote (opts, name) {
 
 function remoteDeploy (opts, remoteName) {
 	var remote = storage.getRemoteUrlByName(remoteName);
-	var flags = '';
+	var flags = [];
 
 	if (!remote) {
 		u.halt('Remote ' + remoteName + ' not found');
 	}
 
 	if (opts.dryRun) {
-		flags = '--dry-run';
+		flags.push('--dry-run');
+	}
+
+	if (opts.head) {
+		flags.push('--head ' + opts.head);
 	}
 
 	var cmd = sprintf(
 		'ssh %s \'%s; cd %s; git pull; ./node_modules/.bin/ad deploy local %s\'',
-		remote.connectionString, remote.env, remote.path, flags
+		remote.connectionString, remote.env, remote.path, flags.join(' ')
 	);
 
 	var result = shell.exec(cmd);
@@ -113,7 +117,7 @@ function localDeploy (opts) {
 	var matcher = new Matcher(minimatch);
 
 	var recentDeployHash = storage.getRecentDeployHash();
-	var headHash = shell.getHeadHash();
+	var headHash = opts.head || shell.getHeadHash();
 
 	var commands;
 
@@ -153,7 +157,7 @@ function localDeploy (opts) {
 		shell.executeCommands(commands);
 
 		// Save deploy to completed deploys array
-		storage.saveDeployInfo({ hash: headHash, commands: commands });
+		storage.saveDeployInfo({ startHash: recentDeployHash, endHash: headHash, commands: commands });
 
 		u.info('Successfully deployed!');
 	}
@@ -181,7 +185,8 @@ function handleError (e) {
 }
 
 var options = {
-	'dryRun': ['dry-run', 'dry']
+	'dryRun': ['dry-run', 'dry'],
+	'head': ['head', 'head-hash']
 };
 
 try {

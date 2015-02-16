@@ -12,3 +12,4 @@ remote rm <name>            remote remote
 options:
 
 --dry-run                   do not execute deploy commands, just show it
+--head                      hash to use as head value
