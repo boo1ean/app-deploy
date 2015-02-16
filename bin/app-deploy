@@ -96,8 +96,12 @@ function remoteDeploy (opts, remoteName) {
 		flags.push('--dry-run');
 	}
 
-	if (opts.head) {
-		flags.push('--head ' + opts.head);
+	if (opts.start) {
+		flags.push('--start ' + opts.start);
+	}
+
+	if (opts.end) {
+		flags.push('--end ' + opts.end);
 	}
 
 	var cmd = sprintf(
@@ -116,8 +120,8 @@ function localDeploy (opts) {
 
 	var matcher = new Matcher(minimatch);
 
-	var recentDeployHash = storage.getRecentDeployHash();
-	var headHash = opts.head || shell.getHeadHash();
+	var recentDeployHash = opts.start || storage.getRecentDeployHash();
+	var headHash = opts.end || shell.getHeadHash();
 
 	var commands;
 
@@ -186,7 +190,8 @@ function handleError (e) {
 
 var options = {
 	'dryRun': ['dry-run', 'dry'],
-	'head': ['head', 'head-hash']
+	'end': ['head', 'end', 'end-hash'],
+	'start': ['start', 'start-hash']
 };
 
 try {
