@@ -24,6 +24,13 @@ ad deploy production
 
 Looks nice but first you need to configure!
 
+## Initial notices
+
+`app-deploy` is dedicated to do deploys of already running app/service, first time you
+should setup and run your application manually.
+
+It's not dedicated to deploy "new app instances".
+
 ## Triggers deploy config
 
 Triggers config must be located in project root (and must be named `app-deploy.json`).
@@ -44,15 +51,15 @@ Sample config describes conditions and triggers for `app-deploy` cli util:
 		// then execute "knex migrate:latest"
 		"database/**"  : "knex migrate:latest",
 
-		// if any local dependency which are required by any file under web/** were changed
-		// then execute "pm2 restart all"
+		// if any local dependency which are required by any file under web/**
+		// were changed then execute "pm2 restart all"
 		"+web": "pm2 restart all"
 	}
 }
 ```
 
 Each "trigger" consits of condition (glob or requires matching pattern) and shell command   
-which will be executed if condition is true (if files diff since last deploy matches pattern)
+which will be executed if condition is true (if files diff since last deploy matches condition pattern)
 
 ## Add remote server (for remote deploy)
 
