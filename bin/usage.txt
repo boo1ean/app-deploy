@@ -1,4 +1,4 @@
-app-deploy (0.2.0)
+app-deploy
 
 commands:
 
@@ -12,4 +12,5 @@ remote rm <name>            remote remote
 options:
 
 --dry-run                   do not execute deploy commands, just show it
---head                      hash to use as head value
+--start                     specify deploy range start commit
+--end                       specify deploy range end commit
