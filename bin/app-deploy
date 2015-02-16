@@ -122,7 +122,7 @@ function localDeploy (opts) {
 	}
 
 	if (didNotDeployYet(recentDeployHash)) {
-		commands = matcher.findInitialTriggersToExecute(config.triggers);
+		return matcher.findInitialTriggersToExecute(config.triggers).then(runCommands);
 	} else {
 		// Get list of changed files
 		var files = shell.getChangedFilesBetween(recentDeployHash, headHash);
@@ -132,21 +132,23 @@ function localDeploy (opts) {
 		u.info(files.join('\n'), '\n');
 
 		// Get list of commands to execute according to changed files
-		commands = matcher.findTriggersToExecute(config.triggers, files);
+		matcher.findTriggersToExecute(config.triggers, files).then(runCommands);
 	}
 
-	if (opts.dryRun) {
-		dryRun();
-	} else {
-		run();
+	function runCommands (commands) {
+		if (opts.dryRun) {
+			dryRun(commands);
+		} else {
+			run(commands);
+		}
 	}
 
-	function dryRun () {
+	function dryRun (commands) {
 		u.info('Commands to be executed:');
 		u.info(commands.join('\n'));
 	}
 
-	function run () {
+	function run (commands) {
 		// Execute commands
 		shell.executeCommands(commands);
 
