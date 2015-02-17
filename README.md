@@ -26,7 +26,7 @@ Looks nice but first you need to configure!
 
 ## Initial notices
 
-`app-deploy` is dedicated to do deploys of already running app/service, first time you
+`app-deploy` is dedicated to do incremental deploy of already running app/service, first time you
 should setup and run your application manually.
 
 It's not dedicated to deploy "new app instances".
