@@ -1,0 +1,14 @@
+# execute custom bash commands (set env and stuff)
+{{{ pre_run_commands }}}
+
+# ensure that app-deploy is installed on the remote station
+type ad >/dev/null 2>&1 || { npm install -g app-deploy }
+
+# go to work directory
+cd {{{ work_dir }}}
+
+# pull latest changes
+git pull
+
+# Execute local deploy
+ad deploy local {{{ flags }}}

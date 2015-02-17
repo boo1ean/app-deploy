@@ -17,6 +17,11 @@ var Config = require('../lib/config');
 
 var configPath = path.resolve('app-deploy.json');
 
+// setup lodash templates to work with {{{ }}} interpolators
+_.templateSettings.interpolate = /{{{([\s\S]+?)}}}/g;
+
+var REMOTE_DEPLOY_SCRIPT = __dirname + '/remote-deploy';
+
 try {
 	var config  = new Config(configPath);
 	var conf    = new Configstore(configPath);
@@ -104,13 +109,29 @@ function remoteDeploy (opts, remoteName) {
 		flags.push('--end ' + opts.end);
 	}
 
-	var cmd = sprintf(
-		'ssh %s \'%s; cd %s; git pull; ./node_modules/.bin/ad deploy local %s\'',
-		remote.connectionString, remote.env, remote.path, flags.join(' ')
-	);
+
+	var deployScript = getDeployScript({
+		flags: flags.join(' '),
+		work_dir: remote.path,
+		pre_run_commands: remote.env
+	});
+
+	var cmd = sprintf('ssh %s \'%s\'', remote.connectionString, deployScript);
 
 	var result = shell.exec(cmd);
 	u.info(result.output);
+
+	function getDeployScript (data) {
+		return _.template(fs.readFileSync(REMOTE_DEPLOY_SCRIPT).toString())(data)
+			.split('\n')
+			.filter(noComment)
+			.filter(Boolean)
+			.join('; ');
+
+		function noComment (string) {
+			return string[0] !== '#';
+		}
+	}
 };
 
 function localDeploy (opts) {
