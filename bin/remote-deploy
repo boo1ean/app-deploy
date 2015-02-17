@@ -1,8 +1,5 @@
 # ensure that app-deploy is installed on the remote station
-type ad >/dev/null 2>&1 || { npm install -g app-deploy }
-
-# go to work directory
-cd {{{ work_dir }}}
+type ad >/dev/null 2>&1 || { npm install -g app-deploy; }
 
 # pull latest changes
 git pull

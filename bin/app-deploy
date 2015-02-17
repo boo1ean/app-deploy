@@ -181,8 +181,7 @@ function remoteDeploy (opts, remoteName) {
 	}
 
 	var deployScript = getDeployScript({
-		flags: flags.join(' '),
-		work_dir: remote.path
+		flags: flags.join(' ')
 	});
 
 	executeShellScriptAtRemote(remoteName, deployScript);
@@ -223,7 +222,8 @@ function executeShellScriptAtRemote (remoteName, script) {
 		u.halt('Remote ' + remoteName + ' not found');
 	}
 
-	var cmd = sprintf('ssh %s \'%s; %s\'', remote.connectionString, remote.env || DEFAULT_ENV, script);
+	// TODO add pre_commands script
+	var cmd = sprintf('ssh %s \'%s; cd %s; %s\'', remote.connectionString, remote.env || DEFAULT_ENV, remote.path, script);
 	var result = shell.exec(cmd);
 
 	u.info(result.output);
