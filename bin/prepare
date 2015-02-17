@@ -1,0 +1,4 @@
+# setup remote env if necessary
+{{{ env }}}
+# change to workdir
+cd {{{ path }}}

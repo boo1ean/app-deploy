@@ -23,6 +23,7 @@ _.templateSettings.interpolate = /{{{([\s\S]+?)}}}/g;
 
 var REMOTE_DEPLOY_SCRIPT     = __dirname + '/remote-deploy';
 var APP_DEPLOY_UPDATE_SCRIPT = __dirname + '/update-app-deploy'
+var PREPARE_SCRIPT           = __dirname + '/prepare';
 var DEFAULT_ENV              = 'export APP_DEPLOY_VERSION=' + version;
 
 try {
@@ -222,8 +223,10 @@ function executeShellScriptAtRemote (remoteName, script) {
 		u.halt('Remote ' + remoteName + ' not found');
 	}
 
-	// TODO add pre_commands script
-	var cmd = sprintf('ssh %s \'%s; cd %s; %s\'', remote.connectionString, remote.env || DEFAULT_ENV, remote.path, script);
+	var prepareScript = getShellScript(PREPARE_SCRIPT, remote);
+	var fullScript = [prepareScript, script].join('; ');
+
+	var cmd = sprintf('ssh %s \'%s\'', remote.connectionString, fullScript);
 	var result = shell.exec(cmd);
 
 	u.info(result.output);
