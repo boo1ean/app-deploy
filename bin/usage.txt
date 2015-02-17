@@ -5,6 +5,9 @@ commands:
 deploy local                execute deploy process locally
 deploy <remote>             execute deploy process remotely
 
+update local                update app-deploy at local machine
+update <remote>             update app-deploy at remote server
+
 remote ls                   list available remotes
 remote add <name> <url>     add new remote
 remote rm <name>            remote remote

@@ -7,6 +7,7 @@ var fs = require('fs');
 var realist = require('realist');
 var table = require('text-table');
 var shell = require('../lib/shell');
+var version = require('../package').version;
 var u = require('../lib/utils');
 var sprintf = require('util').format;
 
@@ -20,7 +21,9 @@ var configPath = path.resolve('app-deploy.json');
 // setup lodash templates to work with {{{ }}} interpolators
 _.templateSettings.interpolate = /{{{([\s\S]+?)}}}/g;
 
-var REMOTE_DEPLOY_SCRIPT = __dirname + '/remote-deploy';
+var REMOTE_DEPLOY_SCRIPT     = __dirname + '/remote-deploy';
+var APP_DEPLOY_UPDATE_SCRIPT = __dirname + '/update-app-deploy'
+var DEFAULT_ENV              = 'export APP_DEPLOY_VERSION=' + version;
 
 try {
 	var config  = new Config(configPath);
@@ -36,7 +39,9 @@ var commands = {
 	'remote rm <name>': removeRemote,
 	'remote ls': listRemotes,
 	'deploy local': localDeploy,
-	'deploy <remote>': remoteDeploy
+	'deploy <remote>': remoteDeploy,
+	'update local': localUpdate,
+	'update <remote>': remoteUpdate
 };
 
 function usage () {
@@ -88,51 +93,6 @@ function removeRemote (opts, name) {
 	storage.removeRemoteByName(name);
 	u.info('Successfully removed remote "' + name + '"');
 }
-
-function remoteDeploy (opts, remoteName) {
-	var remote = storage.getRemoteUrlByName(remoteName);
-	var flags = [];
-
-	if (!remote) {
-		u.halt('Remote ' + remoteName + ' not found');
-	}
-
-	if (opts.dryRun) {
-		flags.push('--dry-run');
-	}
-
-	if (opts.start) {
-		flags.push('--start ' + opts.start);
-	}
-
-	if (opts.end) {
-		flags.push('--end ' + opts.end);
-	}
-
-
-	var deployScript = getDeployScript({
-		flags: flags.join(' '),
-		work_dir: remote.path,
-		pre_run_commands: remote.env
-	});
-
-	var cmd = sprintf('ssh %s \'%s\'', remote.connectionString, deployScript);
-
-	var result = shell.exec(cmd);
-	u.info(result.output);
-
-	function getDeployScript (data) {
-		return _.template(fs.readFileSync(REMOTE_DEPLOY_SCRIPT).toString())(data)
-			.split('\n')
-			.filter(noComment)
-			.filter(Boolean)
-			.join('; ');
-
-		function noComment (string) {
-			return string[0] !== '#';
-		}
-	}
-};
 
 function localDeploy (opts) {
 	if (isGitRepoMissing()) {
@@ -203,6 +163,70 @@ function localDeploy (opts) {
 	function isEverythingDeployed (left, right) {
 		return left === right;
 	}
+}
+
+function remoteDeploy (opts, remoteName) {
+	var flags = [];
+
+	if (opts.dryRun) {
+		flags.push('--dry-run');
+	}
+
+	if (opts.start) {
+		flags.push('--start ' + opts.start);
+	}
+
+	if (opts.end) {
+		flags.push('--end ' + opts.end);
+	}
+
+	var deployScript = getDeployScript({
+		flags: flags.join(' '),
+		work_dir: remote.path
+	});
+
+	executeShellScriptAtRemote(remoteName, deployScript);
+
+	function getDeployScript (data) {
+		return getShellScript(REMOTE_DEPLOY_SCRIPT, data);
+	}
+}
+
+function getShellScript(scriptPath, data) {
+	return _.template(fs.readFileSync(scriptPath).toString())(data)
+		.split('\n')
+		.filter(noComment)
+		.filter(Boolean)
+		.join('; ');
+
+	function noComment (string) {
+		return string[0] !== '#';
+	}
+}
+
+function localUpdate (opts) {
+	var script = getShellScript(APP_DEPLOY_UPDATE_SCRIPT);
+	var result = shell.exec(script);
+	u.info(result.output);
+	u.info('Successfully update app-deploy CLI');
+}
+
+function remoteUpdate (opts, remoteName) {
+	var script = getShellScript(APP_DEPLOY_UPDATE_SCRIPT);
+	executeShellScriptAtRemote(remoteName, script);
+}
+
+function executeShellScriptAtRemote (remoteName, script) {
+	var remote = storage.getRemoteUrlByName(remoteName);
+
+	if (!remote) {
+		u.halt('Remote ' + remoteName + ' not found');
+	}
+
+	var cmd = sprintf('ssh %s \'%s; %s\'', remote.connectionString, remote.env || DEFAULT_ENV, script);
+	var result = shell.exec(cmd);
+
+	u.info(result.output);
 }
 
 function handleError (e) {

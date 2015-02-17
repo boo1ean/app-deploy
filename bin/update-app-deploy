@@ -1,0 +1,5 @@
+# stupid update strategy
+# remove app-deploy
+npm rm -g app-deploy
+# and install
+npm install -g app-deploy

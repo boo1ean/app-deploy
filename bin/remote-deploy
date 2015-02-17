@@ -1,6 +1,3 @@
-# execute custom bash commands (set env and stuff)
-{{{ pre_run_commands }}}
-
 # ensure that app-deploy is installed on the remote station
 type ad >/dev/null 2>&1 || { npm install -g app-deploy }
 
