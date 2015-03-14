@@ -66,7 +66,7 @@ which will be executed if condition is true (if files diff since last deploy mat
 Add remote:
 
 ```
-add remote <remote name> <ssh connection string> [--env]
+ad remote add <remote name> <ssh connection string> [--env]
 ```
 
 Example adding `my-localhost-server` remote:
