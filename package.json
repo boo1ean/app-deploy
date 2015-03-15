@@ -1,6 +1,6 @@
 {
   "name": "app-deploy",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Deployment helper",
   "main": "index.js",
   "scripts": {
@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/boo1ean/app-deploy",
   "dependencies": {
-    "all-requires": "^0.1.1",
+    "all-requires": "^0.1.2",
     "bluebird": "^2.9.9",
     "configstore": "^0.3.2",
     "lodash": "^3.1.0",
