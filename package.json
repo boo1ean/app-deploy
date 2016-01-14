@@ -1,6 +1,6 @@
 {
   "name": "app-deploy",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Deployment helper",
   "main": "index.js",
   "scripts": {
