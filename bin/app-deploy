@@ -36,6 +36,7 @@ try {
 
 var commands = {
 	'default': usage,
+	'init <commit-hash>': init,
 	'remote add <name> <url>': addRemote,
 	'remote rm <name>': removeRemote,
 	'remote ls': listRemotes,
@@ -214,6 +215,11 @@ function localUpdate (opts) {
 function remoteUpdate (opts, remoteName) {
 	var script = getShellScript(APP_DEPLOY_UPDATE_SCRIPT);
 	executeShellScriptAtRemote(remoteName, script);
+}
+
+function init (opts, commit) {
+	storage.saveDeployInfo({ startHash: commit, endHash: commit });
+	u.info('Successfully initialized');
 }
 
 function executeShellScriptAtRemote (remoteName, script) {
